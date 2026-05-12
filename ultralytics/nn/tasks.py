@@ -18,9 +18,6 @@ from ultralytics.nn.modules import (
     C2PSA,
     C3,
     C3TR,
-    ConvAttnLite,
-    ConvAttnDeform,
-    CoordAttConv,
     ELAN1,
     OBB,
     OBB26,
@@ -46,7 +43,10 @@ from ultralytics.nn.modules import (
     Concat,
     Conv,
     Conv2,
+    ConvAttnDeform,
+    ConvAttnLite,
     ConvTranspose,
+    CoordAttConv,
     Detect,
     DraxNet,
     DWConv,
@@ -59,6 +59,7 @@ from ultralytics.nn.modules import (
     ImagePoolingAttn,
     Index,
     LRPCHead,
+    MyConvBlock,
     Pose,
     Pose26,
     RepC3,
@@ -78,7 +79,6 @@ from ultralytics.nn.modules import (
     YOLOESegment,
     YOLOESegment26,
     v10Detect,
-    MyConvBlock,
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, LOGGER, WINDOWS, YAML, colorstr, emojis
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
