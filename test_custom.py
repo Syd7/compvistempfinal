@@ -1,3 +1,6 @@
+import os
+os.environ.setdefault("YOLO_CONFIG_DIR", r"C:\tmp")
+
 from ultralytics import YOLO
 import gc
 import torch
@@ -5,7 +8,7 @@ import torch
 gc.collect()
 torch.cuda.empty_cache()
 
-model = YOLO("ultralytics/cfg/models/ext/cad_yolo12.yaml")
+model = YOLO("ultralytics/cfg/models/ext/draxnet-yolo26.yaml")
 print("Model built successfully")
 
 x = torch.randn(1, 3, 640, 640)

@@ -70,6 +70,8 @@ from ultralytics.nn.modules import (
     SCDown,
     Segment,
     Segment26,
+    SkyFusionBackbone,
+    SkyFusionBlock,
     TorchVision,
     WorldDetect,
     YOLOEDetect,
@@ -1581,6 +1583,7 @@ def parse_model(d, ch, verbose=True):
         {
             Classify,
             Conv,
+            SkyFusionBlock,
             ConvAttnLite,
             ConvAttnDeform,
             CoordAttConv,
@@ -1720,6 +1723,9 @@ def parse_model(d, ch, verbose=True):
         elif m is CBFuse:
             c2 = ch[f[-1]]
         elif m is DraxNet:
+            c1, c2 = ch[f], args[0]
+            args = [c1, *args]
+        elif m is SkyFusionBackbone:
             c1, c2 = ch[f], args[0]
             args = [c1, *args]
         elif m in frozenset({TorchVision, Index}):

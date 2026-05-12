@@ -1,0 +1,53 @@
+# Ultralytics AGPL-3.0 License - https://ultralytics.com/license
+
+# SkyFusion YOLO26-S object detector for the skyfusion.v1i.yolov11 dataset.
+# The custom SkyFusionBackbone returns P2/4, P3/8, P4/16, and P5/32 features.
+
+nc: 3 # Aircraft, ship, vehicle
+scale: s
+end2end: True
+reg_max: 16 # DFL bins for stronger high-IoU localization/mAP50-95
+scales:
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024]
+  s: [0.50, 0.50, 1024]
+  m: [0.50, 1.00, 512]
+  l: [1.00, 1.00, 512]
+  x: [1.00, 1.50, 512]
+
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, SkyFusionBackbone, [1024, [128, 256, 512, 1024], [96, 192, 384, 768], [1, 2, 3, 2], 0.05]] # 0
+  - [0, 1, Index, [128, 0]] # 1-P2/4
+  - [0, 1, Index, [256, 1]] # 2-P3/8
+  - [0, 1, Index, [512, 2]] # 3-P4/16
+  - [0, 1, Index, [1024, 3]] # 4-P5/32
+  - [-1, 1, SPPF, [1024, 5, 3, True]] # 5
+  - [-1, 2, C2PSA, [1024]] # 6
+
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 3], 1, Concat, [1]] # cat backbone P4
+  - [-1, 2, C3k2, [512, True]] # 9
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 2], 1, Concat, [1]] # cat backbone P3
+  - [-1, 2, C3k2, [256, True]] # 12
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 1], 1, Concat, [1]] # cat backbone P2
+  - [-1, 2, C3k2, [128, True]] # 15 (P2/4-xsmall)
+
+  - [-1, 1, Conv, [128, 3, 2]]
+  - [[-1, 12], 1, Concat, [1]] # cat head P3
+  - [-1, 2, C3k2, [256, True]] # 18 (P3/8-small)
+
+  - [-1, 1, Conv, [256, 3, 2]]
+  - [[-1, 9], 1, Concat, [1]] # cat head P4
+  - [-1, 2, C3k2, [512, True]] # 21 (P4/16-medium)
+
+  - [-1, 1, Conv, [512, 3, 2]]
+  - [[-1, 6], 1, Concat, [1]] # cat head P5
+  - [-1, 1, C3k2, [1024, True, 0.5, True]] # 24 (P5/32-large)
+
+  - [[15, 18, 21, 24], 1, Detect, [nc]] # Detect(P2, P3, P4, P5)

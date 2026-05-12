@@ -56,6 +56,8 @@ __all__ = (
     "RepVGGDW",
     "ResNetLayer",
     "SCDown",
+    "SkyFusionBackbone",
+    "SkyFusionBlock",
     "TorchVision",
 )
 
@@ -1659,6 +1661,174 @@ class DropPath(nn.Module):
         random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
         random_tensor.floor_()
         return x.div(keep_prob) * random_tensor
+
+
+class SkyFusionContextGate(nn.Module):
+    """Channel and spatial recalibration for aerial object features."""
+
+    def __init__(self, channels: int, reduction: int = 16, spatial_kernel: int = 7) -> None:
+        super().__init__()
+        if spatial_kernel % 2 == 0:
+            raise ValueError("spatial_kernel must be odd")
+        hidden = max(channels // max(reduction, 1), 8)
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.channel_mlp = nn.Sequential(
+            nn.Conv2d(channels, hidden, kernel_size=1, bias=True),
+            nn.SiLU(inplace=True),
+            nn.Conv2d(hidden, channels, kernel_size=1, bias=True),
+        )
+        self.spatial = nn.Conv2d(2, 1, kernel_size=spatial_kernel, padding=spatial_kernel // 2, bias=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply channel and spatial gates."""
+        channel_gate = torch.sigmoid(self.channel_mlp(self.avg_pool(x)) + self.channel_mlp(self.max_pool(x)))
+        x = x * channel_gate
+        spatial_gate = torch.sigmoid(
+            self.spatial(torch.cat((torch.mean(x, dim=1, keepdim=True), torch.max(x, dim=1, keepdim=True)[0]), dim=1))
+        )
+        return x * spatial_gate
+
+
+class SkyFusionBlock(nn.Module):
+    """Large-kernel depthwise block with lightweight context gates for aerial detection."""
+
+    def __init__(
+        self,
+        c1: int,
+        c2: int,
+        stride: int = 1,
+        expansion: float = 2.0,
+        drop_path: float = 0.0,
+        layer_scale_init_value: float = 1e-4,
+    ) -> None:
+        super().__init__()
+        hidden = max(int(c2 * expansion), c2)
+        self.expand = Conv(c1, hidden, k=1, s=1)
+        self.local_mixer = DWConv(hidden, hidden, k=5, s=stride)
+        self.wide_mixer = DWConv(hidden, hidden, k=3, s=1, d=2)
+        self.project = Conv(hidden, c2, k=1, s=1, act=False)
+        self.gate = SkyFusionContextGate(c2)
+        self.shortcut = nn.Identity() if c1 == c2 and stride == 1 else Conv(c1, c2, k=1, s=stride, act=False)
+        self.drop_path = DropPath(drop_path)
+        self.act = nn.SiLU(inplace=True)
+        self.layer_scale = (
+            nn.Parameter(layer_scale_init_value * torch.ones(c2)) if layer_scale_init_value > 0 else None
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Fuse residual, large-kernel local context, and lightweight attention."""
+        identity = self.shortcut(x)
+        x = self.expand(x)
+        x = self.local_mixer(x)
+        x = x + self.wide_mixer(x)
+        x = self.project(x)
+        x = self.gate(x)
+        if self.layer_scale is not None:
+            x = x * self.layer_scale.view(1, -1, 1, 1)
+        return self.act(identity + self.drop_path(x))
+
+
+class SkyFusionStage(nn.Module):
+    """Stack of SkyFusion blocks with optional downsampling in the first block."""
+
+    def __init__(
+        self,
+        c1: int,
+        c2: int,
+        depth: int,
+        stride: int,
+        drop_rates: Sequence[float],
+    ) -> None:
+        super().__init__()
+        if depth < 1:
+            raise ValueError("SkyFusionStage depth must be at least 1")
+        blocks = []
+        for i in range(depth):
+            blocks.append(
+                SkyFusionBlock(
+                    c1 if i == 0 else c2,
+                    c2,
+                    stride=stride if i == 0 else 1,
+                    drop_path=float(drop_rates[i]) if i < len(drop_rates) else 0.0,
+                )
+            )
+        self.blocks = nn.Sequential(*blocks)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Run the stage."""
+        return self.blocks(x)
+
+
+class SkyFusionBackbone(nn.Module):
+    """Custom YOLO backbone returning P2, P3, P4, and P5 features for SkyFusion."""
+
+    def __init__(
+        self,
+        c1: int,
+        c2: int = 1024,
+        out_channels: Sequence[int] = (128, 256, 512, 1024),
+        stage_channels: Sequence[int] = (96, 192, 384, 768),
+        depths: Sequence[int] = (1, 2, 3, 2),
+        drop_path_rate: float = 0.05,
+    ) -> None:
+        super().__init__()
+        if len(out_channels) != 4:
+            raise ValueError("SkyFusionBackbone out_channels must provide P2, P3, P4, and P5 widths.")
+        if len(stage_channels) != 4 or len(depths) != 4:
+            raise ValueError("SkyFusionBackbone expects four stage channel values and four depths.")
+
+        out_channels = tuple(int(x) for x in out_channels)
+        stage_channels = tuple(int(x) for x in stage_channels)
+        depths = tuple(int(x) for x in depths)
+        drop_rates = torch.linspace(0, float(drop_path_rate), sum(depths)).tolist()
+
+        self.c2 = c2
+        self.stem = nn.Sequential(
+            Conv(c1, 64, k=3, s=2),
+            SkyFusionBlock(64, 64, stride=1, expansion=1.5),
+        )
+
+        cursor = 0
+        self.stage1 = SkyFusionStage(64, stage_channels[0], depths[0], stride=2, drop_rates=drop_rates[cursor:])
+        cursor += depths[0]
+        self.stage2 = SkyFusionStage(
+            stage_channels[0],
+            stage_channels[1],
+            depths[1],
+            stride=2,
+            drop_rates=drop_rates[cursor:],
+        )
+        cursor += depths[1]
+        self.stage3 = SkyFusionStage(
+            stage_channels[1],
+            stage_channels[2],
+            depths[2],
+            stride=2,
+            drop_rates=drop_rates[cursor:],
+        )
+        cursor += depths[2]
+        self.stage4 = SkyFusionStage(
+            stage_channels[2],
+            stage_channels[3],
+            depths[3],
+            stride=2,
+            drop_rates=drop_rates[cursor:],
+        )
+
+        self.p2_proj = Conv(stage_channels[0], out_channels[0], k=1, s=1)
+        self.p3_proj = Conv(stage_channels[1], out_channels[1], k=1, s=1)
+        self.p4_proj = Conv(stage_channels[2], out_channels[2], k=1, s=1)
+        self.p5_proj = Conv(stage_channels[3], out_channels[3], k=1, s=1)
+
+    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+        """Return P2, P3, P4, and P5 feature maps."""
+        x = self.stem(x)
+        p2 = self.stage1(x)
+        p3 = self.stage2(p2)
+        p4 = self.stage3(p3)
+        p5 = self.stage4(p4)
+        return [self.p2_proj(p2), self.p3_proj(p3), self.p4_proj(p4), self.p5_proj(p5)]
 
 
 class LayerNorm2D(nn.Module):

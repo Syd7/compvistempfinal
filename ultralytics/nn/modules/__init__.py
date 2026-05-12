@@ -68,6 +68,8 @@ from .block import (
     RepVGGDW,
     ResNetLayer,
     SCDown,
+    SkyFusionBackbone,
+    SkyFusionBlock,
     TorchVision,
 )
 from .conv import (
@@ -214,6 +216,8 @@ __all__ = (
     "RepVGGDW",
     "ResNetLayer",
     "SCDown",
+    "SkyFusionBackbone",
+    "SkyFusionBlock",
     "Segment",
     "Segment26",
     "SpatialAttention",
