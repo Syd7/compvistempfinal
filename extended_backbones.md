@@ -6,7 +6,7 @@ This repository can expose non-standard backbones to Ultralytics YAMLs as native
 
 - `DraxBlock` was copied from the sibling MLX project and added to [ultralytics/nn/modules/block.py](/home/ralampay/workspace/ultralytics/ultralytics/nn/modules/block.py).
 - `DraxResidualBlock` and `DraxNet` were added beside it so the Drax mixer can be used as a detection backbone.
-- `DraxNet` was exported through [ultralytics/nn/modules/__init__.py](/home/ralampay/workspace/ultralytics/ultralytics/nn/modules/__init__.py) and registered in [ultralytics/nn/tasks.py](/home/ralampay/workspace/ultralytics/ultralytics/nn/tasks.py) as a multi-output backbone module.
+- `DraxNet` was exported through [ultralytics/nn/modules/**init**.py](/home/ralampay/workspace/ultralytics/ultralytics/nn/modules/__init__.py) and registered in [ultralytics/nn/tasks.py](/home/ralampay/workspace/ultralytics/ultralytics/nn/tasks.py) as a multi-output backbone module.
 - A new model config lives at [ultralytics/cfg/models/ext/draxnet-yolo26.yaml](/home/ralampay/workspace/ultralytics/ultralytics/cfg/models/ext/draxnet-yolo26.yaml).
 
 ## Source Backbone
