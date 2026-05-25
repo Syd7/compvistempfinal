@@ -6,7 +6,6 @@ import os
 import shutil
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_CFG = ROOT / "ultralytics" / "cfg" / "models" / "ext" / "skyfusion-yolo26s.yaml"
 DATA_CFG = ROOT / "skyfusion.v1i.yolov11 (1)" / "data.yaml"
