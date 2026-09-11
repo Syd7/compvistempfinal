@@ -6,8 +6,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
 
@@ -1712,9 +1712,7 @@ class SkyFusionBlock(nn.Module):
         self.shortcut = nn.Identity() if c1 == c2 and stride == 1 else Conv(c1, c2, k=1, s=stride, act=False)
         self.drop_path = DropPath(drop_path)
         self.act = nn.SiLU(inplace=True)
-        self.layer_scale = (
-            nn.Parameter(layer_scale_init_value * torch.ones(c2)) if layer_scale_init_value > 0 else None
-        )
+        self.layer_scale = nn.Parameter(layer_scale_init_value * torch.ones(c2)) if layer_scale_init_value > 0 else None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Fuse residual, large-kernel local context, and lightweight attention."""
