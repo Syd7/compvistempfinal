@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import torch
 from skyfusion_common import MODEL_CFG
 
-import torch
 from ultralytics import YOLO
 
 
