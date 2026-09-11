@@ -1,9 +1,12 @@
 import os
+
 os.environ.setdefault("YOLO_CONFIG_DIR", r"C:\tmp")
 
-from ultralytics import YOLO
 import gc
+
 import torch
+
+from ultralytics import YOLO
 
 gc.collect()
 torch.cuda.empty_cache()
