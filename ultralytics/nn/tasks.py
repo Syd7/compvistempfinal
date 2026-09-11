@@ -8,7 +8,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from ultralytics.nn.autobackend import check_class_names
 from ultralytics.nn.modules import (
@@ -18,9 +18,6 @@ from ultralytics.nn.modules import (
     C2PSA,
     C3,
     C3TR,
-    ConvAttnLite,
-    ConvAttnDeform,
-    CoordAttConv,
     ELAN1,
     OBB,
     OBB26,
@@ -46,7 +43,10 @@ from ultralytics.nn.modules import (
     Concat,
     Conv,
     Conv2,
+    ConvAttnDeform,
+    ConvAttnLite,
     ConvTranspose,
+    CoordAttConv,
     Detect,
     DraxNet,
     DWConv,
@@ -59,6 +59,7 @@ from ultralytics.nn.modules import (
     ImagePoolingAttn,
     Index,
     LRPCHead,
+    MyConvBlock,
     Pose,
     Pose26,
     RepC3,
@@ -78,7 +79,6 @@ from ultralytics.nn.modules import (
     YOLOESegment,
     YOLOESegment26,
     v10Detect,
-    MyConvBlock,
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, LOGGER, WINDOWS, YAML, colorstr, emojis
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -1384,11 +1384,9 @@ class SafeClass:
 
     def __init__(self, *args, **kwargs):
         """Initialize SafeClass instance, ignoring all arguments."""
-        pass
 
     def __call__(self, *args, **kwargs):
         """Run SafeClass instance, ignoring all arguments."""
-        pass
 
 
 class SafeUnpickler(pickle.Unpickler):
@@ -1722,10 +1720,7 @@ def parse_model(d, ch, verbose=True):
             args = [c1, c2, *args[1:]]
         elif m is CBFuse:
             c2 = ch[f[-1]]
-        elif m is DraxNet:
-            c1, c2 = ch[f], args[0]
-            args = [c1, *args]
-        elif m is SkyFusionBackbone:
+        elif m is DraxNet or m is SkyFusionBackbone:
             c1, c2 = ch[f], args[0]
             args = [c1, *args]
         elif m in frozenset({TorchVision, Index}):
