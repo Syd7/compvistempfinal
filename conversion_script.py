@@ -1,7 +1,8 @@
 import os
-from tqdm import tqdm
-from pycocotools.coco import COCO
 import shutil
+
+from pycocotools.coco import COCO
+from tqdm import tqdm
 
 # =========================
 # CONFIG
@@ -16,13 +17,14 @@ PERSON_ID = 1
 VEHICLE_IDS = [2, 3, 4, 6, 8]  # bicycle, car, motorcycle, bus, truck
 
 # Option A: All animals
-ANIMAL_IDS = [16,17,18,19,20,21,22,23,24,25]
+ANIMAL_IDS = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 
 # Option B (recommended for CCTV): only dog + cat
 # ANIMAL_IDS = [17, 18]
 
 # Filtering
 MIN_BBOX_SIZE = 0  # pixels (set 0 to disable)
+
 
 # =========================
 # UTILS
@@ -34,6 +36,7 @@ def convert_bbox(img_w, img_h, bbox):
     w /= img_w
     h /= img_h
     return x_center, y_center, w, h
+
 
 # =========================
 # MAIN
@@ -78,9 +81,8 @@ for split in SPLITS:
             x, y, w, h = ann["bbox"]
 
             # Optional bbox size filtering
-            if MIN_BBOX_SIZE > 0:
-                if w < MIN_BBOX_SIZE or h < MIN_BBOX_SIZE:
-                    continue
+            if MIN_BBOX_SIZE > 0 and (w < MIN_BBOX_SIZE or h < MIN_BBOX_SIZE):
+                continue
 
             bbox = convert_bbox(img["width"], img["height"], (x, y, w, h))
 
@@ -98,10 +100,7 @@ for split in SPLITS:
             shutil.copy(src, dst)
 
         # Write label file
-        label_path = os.path.join(
-            out_lbl_dir,
-            os.path.splitext(img["file_name"])[0] + ".txt"
-        )
+        label_path = os.path.join(out_lbl_dir, os.path.splitext(img["file_name"])[0] + ".txt")
 
         with open(label_path, "w") as f:
             f.write("\n".join(label_lines))

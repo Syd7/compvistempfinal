@@ -8,7 +8,7 @@ commit_message="${COMMIT_MESSAGE:-chore: checkpoint before rebasing from the lat
 print_repo_version() {
   local repo_version git_version
   repo_version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' ultralytics/__init__.py | head -n 1 || true)"
-  git_version="$(git describe --tags --always --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || true)"
+  git_version="$(git describe --tags --always --dirty 2> /dev/null || git rev-parse --short HEAD 2> /dev/null || true)"
 
   echo "Current repository version:"
   if [[ -n "$repo_version" ]]; then
@@ -21,12 +21,12 @@ print_repo_version() {
 
 trap print_repo_version EXIT
 
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
   echo "error: must be run inside a git repository" >&2
   exit 1
 fi
 
-if ! git remote get-url "$remote" >/dev/null 2>&1; then
+if ! git remote get-url "$remote" > /dev/null 2>&1; then
   echo "error: git remote '$remote' is not configured" >&2
   exit 1
 fi
@@ -48,7 +48,7 @@ if [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
   has_untracked_files=1
 fi
 
-if (( has_tracked_changes || has_untracked_files )); then
+if ((has_tracked_changes || has_untracked_files)); then
   echo "Committing current changes on $current_branch..."
   git add -A
   git commit -m "$commit_message"
