@@ -7,7 +7,6 @@ import torch
 from ultralytics import YOLO
 from ultralytics.nn.modules import DraxNet
 
-
 ROOT = Path(__file__).resolve().parents[1]
 CFG = ROOT / "ultralytics" / "cfg" / "models" / "ext" / "draxnet-yolo26.yaml"
 
