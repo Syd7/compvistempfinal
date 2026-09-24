@@ -5,9 +5,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import torch
 from skyfusion_common import DATA_CFG, MODEL_CFG, PROJECT_DIR
 
-import torch
 from ultralytics import YOLO
 
 
