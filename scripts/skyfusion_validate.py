@@ -5,10 +5,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import torch
 from skyfusion_common import DATA_CFG, PROJECT_DIR, ROOT
 
-import torch
 from ultralytics import YOLO
+
 DEFAULT_WEIGHTS = ROOT / "runs" / "final_project" / "skyfusion_yolo26s" / "weights" / "best.pt"
 
 
