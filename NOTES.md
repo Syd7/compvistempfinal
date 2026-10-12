@@ -9,7 +9,7 @@ git remote -v
 Expected upstream:
 
 ```bash
-upstream  git@github.com:ultralytics/ultralytics.git
+upstream git@github.com:ultralytics/ultralytics.git
 ```
 
 Fetch the latest refs from upstream without changing your working branch:
