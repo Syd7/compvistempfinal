@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import inspect
-from typing import Optional, Sequence, Union
+from typing import Sequence
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 from ultralytics.nn.modules.conv import autopad
 
@@ -16,7 +18,7 @@ except ImportError:  # pragma: no cover - handled lazily at runtime
 class ChannelAttention(nn.Module):
     """Lightweight squeeze-and-excitation style channel attention."""
 
-    def __init__(self, channels: int, reduction: int = 16, activation: Optional[nn.Module] = None) -> None:
+    def __init__(self, channels: int, reduction: int = 16, activation: nn.Module | None = None) -> None:
         super().__init__()
         reduction = max(reduction, 1)
         hidden = max(channels // reduction, 1)
@@ -43,14 +45,14 @@ class ConvAttnLite(nn.Module):
         self,
         c1: int,
         c2: int,
-        k: Union[Sequence[int], int] = 3,
-        s: Union[Sequence[int], int] = 1,
+        k: Sequence[int] | int = 3,
+        s: Sequence[int] | int = 1,
         p=None,
         g: int = 1,
-        d: Union[Sequence[int], int] = 1,
+        d: Sequence[int] | int = 1,
         act=True,
         expand_ratio: float = 1.5,
-        attn_reduction: Optional[int] = 16,
+        attn_reduction: int | None = 16,
     ) -> None:
         super().__init__()
         if g != 1:
@@ -161,14 +163,14 @@ class ConvAttnDeform(nn.Module):
         self,
         c1: int,
         c2: int,
-        k: Union[Sequence[int], int] = 3,
-        s: Union[Sequence[int], int] = 1,
+        k: Sequence[int] | int = 3,
+        s: Sequence[int] | int = 1,
         p=None,
         g: int = 1,
-        d: Union[Sequence[int], int] = 1,
+        d: Sequence[int] | int = 1,
         act=True,
         deform_groups: int = 1,
-        attn_reduction: Optional[int] = 16,
+        attn_reduction: int | None = 16,
         zero_init_offset: bool = True,
     ) -> None:
         super().__init__()
@@ -198,15 +200,15 @@ class ConvAttnDeform(nn.Module):
         if isinstance(padding, list):
             padding = tuple(padding)
 
-        deform_kwargs = dict(
-            in_channels=c1,
-            out_channels=c2,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            dilation=dilation,
-            bias=False,
-        )
+        deform_kwargs = {
+            "in_channels": c1,
+            "out_channels": c2,
+            "kernel_size": kernel_size,
+            "stride": stride,
+            "padding": padding,
+            "dilation": dilation,
+            "bias": False,
+        }
         deform_sig = inspect.signature(DeformConv2d).parameters
         if "groups" in deform_sig:
             deform_kwargs["groups"] = g
